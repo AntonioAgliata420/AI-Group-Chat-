@@ -1,0 +1,1291 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<link rel="icon" href="data:,"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<title>Multi-Model Group Chat</title>
+<script>try{var _t=localStorage.getItem("mmgc.theme");var _tv=_t?JSON.parse(_t):"dark";document.documentElement.dataset.theme=(_tv==="light"?"light":"dark");}catch(e){document.documentElement.dataset.theme="dark";}</script>
+<style>
+/* ---------- Theme (dark is the default) ---------- */
+:root, :root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0b0b0d; --bg2:#141416;
+  --panel:#17171a; --panel2:#222228;
+  --ink:#f5f5f7; --muted:#a7a7b0; --faint:#71717c;
+  --line:#232329; --line2:#35353e;
+  --accent:#0a84ff; --accent-ink:#ffffff;
+  --user-bg:#f0f0f2; --user-ink:#141416;
+  --danger:#ff6961; --danger-bg:rgba(255,105,97,.13);
+  --ok:#4ade80;
+  --code-bg:rgba(127,127,140,.18);
+  --pre-bg:#08080a; --pre-ink:#f2ede3;
+  --shadow:0 18px 44px rgba(0,0,0,.55);
+  --overlay:rgba(4,4,6,.62);
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#ffffff; --bg2:#f2f2f5;
+  --panel:#ffffff; --panel2:#eef0f3;
+  --ink:#17171a; --muted:#5d5d66; --faint:#8b8b94;
+  --line:#e6e6ea; --line2:#cfcfd8;
+  --accent:#0071e3; --accent-ink:#ffffff;
+  --user-bg:#1d1d21; --user-ink:#f4f4f6;
+  --danger:#b42318; --danger-bg:rgba(180,35,24,.07);
+  --ok:#067647;
+  --code-bg:#eef0f3;
+  --pre-bg:#171512; --pre-ink:#f2ede3;
+  --shadow:0 18px 44px rgba(20,20,25,.20);
+  --overlay:rgba(15,14,12,.45);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{height:100%}
+body{margin:0;font-family:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;letter-spacing:-.011em;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+::selection{background:rgba(10,132,255,.38)}
+button{font:inherit;cursor:pointer;color:inherit}
+input,textarea,select{font:inherit;color:var(--ink)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- Buttons (44px minimum tap targets) ---------- */
+.btn{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:999px;padding:0 14px;min-height:44px;font-size:13.5px;font-weight:600;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.dark{background:var(--user-bg);color:var(--user-ink);border-color:var(--user-bg)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+:root[data-theme="light"] .btn.danger{color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.icon-btn{width:44px;padding:0;font-size:17px;flex:0 0 auto}
+.mini-btn{border:1px solid var(--line2);background:var(--panel);border-radius:10px;width:44px;height:44px;display:grid;place-items:center;font-size:14px;flex:0 0 auto}
+.mini-btn.red{color:var(--danger)}
+
+/* ---------- Top bar ---------- */
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:6px 12px;flex:0 0 auto;z-index:30;position:relative}
+.topbar-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.topbar h1{font-size:16.5px;margin:0;font-weight:700;letter-spacing:-.02em;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.topbar .btn.icon-btn{border:0;background:transparent;font-size:19px}
+.topbar .btn.icon-btn:hover{background:var(--panel2)}
+.spacer{flex:1}
+.menu-wrap{position:relative;flex:0 0 auto}
+.menu{position:absolute;right:0;top:calc(100% + 8px);min-width:224px;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow);padding:6px;z-index:70}
+.menu button{display:flex;width:100%;align-items:center;gap:9px;min-height:44px;border:0;background:none;border-radius:9px;padding:0 12px;font-size:14.5px;font-weight:600;text-align:left}
+.menu button:hover{background:var(--panel2)}
+.menu .menu-info{padding:9px 12px 7px;font-size:12px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.6;border-bottom:1px solid var(--line);margin-bottom:5px}
+/* ---------- Avatar stack (header) & participants sheet ---------- */
+.stack-btn{border:0;background:none;padding:4px 2px;min-height:44px;display:flex;align-items:center;border-radius:999px;-webkit-tap-highlight-color:transparent}
+.stack-btn:hover{background:var(--panel2)}
+.avatar-stack{display:flex;align-items:center}
+.stack-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;border:2px solid var(--panel);margin-left:-8px;flex:0 0 auto}
+.stack-av:first-child{margin-left:0}
+.stack-av.off{opacity:.32;filter:grayscale(.55)}
+.stack-av.lg{width:34px;height:34px;font-size:14px;margin-left:0;border:0}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--panel);border-top:1px solid var(--line2);border-radius:22px 22px 0 0;box-shadow:var(--shadow);max-width:600px;margin:0 auto;padding:10px 18px calc(16px + env(safe-area-inset-bottom));max-height:78vh;max-height:78dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:sheetUp .25s ease both}
+@keyframes sheetUp{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
+.sheet-grab{width:38px;height:4.5px;border-radius:99px;background:var(--line2);margin:2px auto 8px}
+.sheet header{display:flex;align-items:center;gap:8px;padding:4px 0 2px}
+.sheet header h2{margin:0;font-size:17px;flex:1}
+.sheet-note{font-size:13px;color:var(--muted);line-height:1.55;margin:4px 0 8px}
+.sheet-row{display:flex;align-items:center;gap:11px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.sheet-row:last-child{border-bottom:0}
+.sheet-row.off .sheet-name,.sheet-row.off .sheet-order{opacity:.45}
+.sheet-order{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--faint);width:16px;text-align:center;flex:0 0 auto}
+.sheet-name{flex:1;min-width:0;font-weight:600;font-size:15px}
+.sheet-model{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--faint);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sheetSettingsBtn{width:100%;margin-top:14px}
+
+/* ---------- Chat ---------- */
+#chatScroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:22px 12px 12px}
+.chat-inner{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:14px;padding-top:2px}
+.empty{max-width:560px;margin:6vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px 24px;box-shadow:0 10px 30px rgba(0,0,0,.16)}
+.empty h2{margin:0 0 8px;font-size:21px;letter-spacing:-.02em}
+.empty p{color:var(--muted);line-height:1.6;margin:0 0 12px;font-size:14.5px}
+.empty.welcome{text-align:center}
+.wstep{display:flex;gap:10px;align-items:flex-start;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-top:9px;font-size:14px;line-height:1.5;color:var(--ink)}
+.wstep .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex:0 0 auto;margin-top:1px}
+.ex-label{font-size:12px;color:var(--faint);font-weight:600;margin:18px 0 0}
+.examples{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.welcome .examples{justify-content:center}
+.example{border:1px solid var(--line2);background:var(--panel2);border-radius:999px;padding:9px 14px;min-height:40px;font-size:13.5px;font-weight:500;color:var(--ink)}
+.example:hover{border-color:var(--accent);color:var(--accent)}
+@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.msg{display:flex;gap:9px;align-items:flex-start;animation:msgIn .22s ease both}
+.msg .avatar{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;margin-top:2px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.msg.user{flex-direction:row-reverse}
+.msg.grouped{margin-top:-10px}
+.msg.grouped .avatar{visibility:hidden}
+.msg.grouped .who{display:none}
+.bubble{max-width:min(86%,640px);min-width:0}
+.msg .who{display:flex;gap:8px;align-items:baseline;margin:0 2px 4px;flex-wrap:wrap}
+.msg.user .who{flex-direction:row-reverse}
+.who .name{font-weight:700;font-size:13px;color:color-mix(in srgb,var(--sc,#888) 62%,var(--ink));cursor:pointer;-webkit-tap-highlight-color:transparent}
+.msg.user .who .name{color:var(--ink);cursor:default}
+.who .model-tip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--faint);word-break:break-all}
+.who time{font-size:11px;color:var(--faint)}
+.body{background:color-mix(in srgb,var(--sc,#888) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--sc,#888) 22%,transparent);border-radius:20px;border-top-left-radius:6px;padding:10px 14px;font-size:15px;line-height:1.58;word-wrap:break-word;overflow-wrap:anywhere;box-shadow:0 1px 2px rgba(0,0,0,.13)}
+.body.tappable{cursor:pointer}
+.msg.user .body{background:var(--accent);color:#fff;border-color:transparent;border-radius:20px;border-top-right-radius:6px;border-top-left-radius:20px}
+.body p{margin:0 0 10px}.body p:last-child{margin-bottom:0}
+.body ul,.body ol{margin:4px 0 10px;padding-left:22px}
+.body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.msg.user .body code{background:rgba(127,127,127,.25);border-color:transparent}
+.body pre{background:var(--pre-bg);color:var(--pre-ink);border-radius:10px;padding:12px;overflow-x:auto;margin:8px 0}
+.body pre code{background:none;border:0;padding:0;color:inherit}
+.body blockquote{border-left:3px solid var(--line2);margin:8px 0;padding:2px 0 2px 12px;color:var(--muted)}
+.body h3,.body h4{margin:12px 0 6px;font-size:15px}
+.body strong{font-weight:750}
+.body.error{background:var(--danger-bg);border-color:var(--line)}
+.msg.user .body a{color:#fff;text-decoration:underline}
+.msg.user .body code{background:rgba(255,255,255,.22)}
+.meta{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--faint);margin:5px 2px 0;display:flex;gap:10px;flex-wrap:wrap}
+.msg.user .meta{justify-content:flex-end}
+.typing{display:inline-flex;gap:5px;padding:7px 2px;align-items:center}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tblink 1.2s infinite ease-in-out}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tblink{0%,60%,100%{opacity:.28;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.round-divider{align-self:center;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.02em;padding:4px 13px;border-radius:999px;animation:msgIn .22s ease both}
+@media (prefers-reduced-motion:reduce){.msg,.round-divider,.sheet{animation:none}.typing i{animation:none;opacity:.6}}
+
+/* ---------- Composer ---------- */
+.composer{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.composer-inner{max-width:780px;margin:0 auto;position:relative}
+#mentionMenu{position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;z-index:40}
+#mentionMenu[hidden]{display:none}
+#mentionMenu button{display:flex;width:100%;gap:9px;align-items:center;border:0;background:none;padding:10px 12px;min-height:48px;text-align:left;font-weight:600;font-size:14px}
+#mentionMenu button:hover,#mentionMenu button.active{background:var(--panel2)}
+#mentionMenu .dot{width:22px;height:22px;border-radius:50%;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+#mentionMenu .mid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--faint);font-weight:400}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+.discuss-btn{font-size:19px;border:1px solid var(--line2);background:var(--panel2)}
+.discuss-btn:disabled{opacity:.45;cursor:not-allowed}
+.input-wrap{flex:1;position:relative;display:flex;min-width:0}
+#input{flex:1;width:100%;resize:none;border:1px solid var(--line2);background:var(--bg);border-radius:24px;padding:13px 52px 13px 16px;font-size:16px;line-height:1.4;max-height:150px;min-height:48px}
+#input:focus{outline:none;border-color:var(--accent)}
+#input:disabled{opacity:.55}
+.send-circle{position:absolute;right:7px;bottom:7px;width:36px;height:36px;border-radius:50%;border:0;background:var(--accent);color:#fff;display:grid;place-items:center;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.25);flex:0 0 auto}
+.send-circle svg{width:18px;height:18px;display:block}
+.send-circle.stop{background:var(--danger)}
+.send-circle:active{transform:scale(.93)}
+.action-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center;padding:0 4px}
+.action-row .hint{font-size:12px;color:var(--faint)}
+#statusLine{font-size:12.5px;color:var(--muted);font-weight:600}
+#statusLine:empty{display:none}
+
+/* ---------- Drawers ---------- */
+.overlay{position:fixed;inset:0;background:var(--overlay);z-index:40}
+.overlay[hidden]{display:none}
+.drawer{position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;height:100dvh;background:var(--panel);z-index:50;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.drawer[hidden]{display:none}
+.drawer header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.drawer header h2{margin:0;font-size:17px;flex:1}
+.drawer .content{overflow-y:auto;padding:16px;flex:1;-webkit-overflow-scrolling:touch}
+.drawer h3{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:24px 0 8px}
+.drawer h3:first-child{margin-top:0}
+.drawer p.note{font-size:13px;color:var(--muted);line-height:1.55;margin:6px 0}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+.field input[type=text],.field input[type=password],.field input[type=number]{width:100%;border:1px solid var(--line2);background:var(--bg);border-radius:10px;padding:11px;font-size:14px;min-height:44px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.key-row{display:flex;gap:7px}.key-row input{flex:1;min-width:0}
+input[type=color]{width:48px;height:44px;border:1px solid var(--line2);border-radius:10px;background:var(--bg);padding:3px;cursor:pointer;flex:0 0 auto}
+input[type=range]{width:100%;min-height:32px}
+.p-edit{border:1px solid var(--line);border-radius:14px;padding:11px;margin-bottom:10px;background:var(--bg)}
+.p-edit.dragging{opacity:.45}
+.p-edit.dragover{border-color:var(--accent)}
+.p-edit-top{display:flex;gap:6px;align-items:center;margin-bottom:9px}
+.drag-handle{cursor:grab;color:var(--faint);font-size:17px;padding:10px 4px;touch-action:none;user-select:none}
+.p-edit .name-row{display:flex;gap:7px;margin-bottom:8px}
+.p-edit .name-row input[type=text]{flex:1;min-width:0;border:1px solid var(--line2);background:var(--panel);border-radius:10px;padding:10px 11px;min-height:44px;font-size:14px}
+.switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;cursor:pointer;min-height:44px}
+.switch input{width:20px;height:20px;accent-color:var(--accent)}
+/* Model picker */
+.model-picker{position:relative}
+.picker-btn{width:100%;display:flex;align-items:center;gap:8px;min-height:48px;border:1px solid var(--line2);background:var(--panel);border-radius:10px;padding:8px 11px;text-align:left}
+.picker-btn .pid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-btn .pprice{font-size:11px;color:var(--muted);white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.picker-btn .chev{color:var(--faint);flex:0 0 auto}
+.picker-pop{margin-top:6px;border:1px solid var(--line2);border-radius:12px;background:var(--panel);overflow:hidden}
+.picker-search{width:100%;border:0;border-bottom:1px solid var(--line);background:var(--bg);padding:12px;font-size:15px;min-height:48px;border-radius:0}
+.picker-search:focus{outline:none}
+.picker-list{max-height:264px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.picker-row{display:flex;width:100%;gap:8px;align-items:center;min-height:48px;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left}
+.picker-row:last-child{border-bottom:0}
+.picker-row:hover{background:var(--panel2)}
+.picker-row.sel{background:var(--panel2)}
+.picker-row .pr-main{flex:1;min-width:0}
+.picker-row .pr-id{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker-row .pr-name{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker-row .pr-price{font-size:11px;color:var(--muted);white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right;line-height:1.5}
+.picker-row.custom .pr-id{color:var(--accent);font-family:inherit;font-size:13px;font-weight:700}
+.picker-note{padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.model-missing{margin:7px 0 0;font-size:12.5px;font-weight:600;line-height:1.45;color:var(--danger);background:var(--danger-bg);border-radius:8px;padding:7px 9px}
+.chat-item{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 8px 8px 12px;margin-bottom:8px;width:100%;text-align:left;min-height:56px}
+.chat-item.current{border-color:var(--accent)}
+.chat-item .t{flex:1;min-width:0;cursor:pointer;padding:4px 0}
+.chat-item .t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-item .t span{font-size:12px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--user-bg);color:var(--user-ink);padding:11px 16px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:80;box-shadow:var(--shadow);max-width:92vw;text-align:center}
+.toast[hidden]{display:none}
+@media (max-width:560px){
+  .bubble{max-width:92%}
+  .action-row .hint{display:none}
+  .topbar{padding:6px 10px}
+  .topbar-row{gap:6px}
+  .topbar h1{font-size:15.5px}
+  .empty{margin-top:2vh;padding:22px 18px}
+  #chatScroll{padding-left:10px;padding-right:10px}
+  .composer{padding-left:10px;padding-right:10px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-row">
+    <h1>Group Chat</h1>
+    <button class="stack-btn" id="stackBtn" title="Participants &amp; speaking order" aria-label="Participants and speaking order"><span class="avatar-stack" id="avatarStack"></span></button>
+    <span class="spacer"></span>
+    <button class="btn icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+    <div class="menu-wrap">
+      <button class="btn icon-btn" id="menuBtn" aria-haspopup="true" aria-expanded="false" title="More actions">•••</button>
+      <div class="menu" id="topMenu" hidden>
+        <div class="menu-info" id="menuInfo"></div>
+        <button id="historyBtn">☰&nbsp; Past chats</button>
+        <button id="exportBtn">↓&nbsp; Export as Markdown</button>
+        <button id="newChatBtn">+&nbsp; New chat</button>
+        <button id="themeBtn2">☀&nbsp; Light / dark mode</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="chatScroll"><div class="chat-inner" id="chatInner"></div></main>
+
+<footer class="composer">
+  <div class="composer-inner">
+    <div id="mentionMenu" hidden></div>
+    <div class="input-row">
+      <button class="btn icon-btn discuss-btn" id="discussBtn" title="Keep discussing — the models take another round" aria-label="Keep discussing">↻</button>
+      <div class="input-wrap">
+        <textarea id="input" rows="1" placeholder="Message the group" aria-label="Message the group"></textarea>
+        <button class="send-circle" id="sendBtn" title="Send" aria-label="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5"/><path d="M5.5 11.5 12 5l6.5 6.5"/></svg></button>
+      </div>
+    </div>
+    <div class="action-row">
+      <span id="statusLine"></span>
+      <span class="spacer"></span>
+      <span class="hint">Enter sends · Shift+Enter = new line · <span id="roundInfo"></span></span>
+    </div>
+  </div>
+</footer>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<!-- SETTINGS -->
+<aside class="drawer" id="settingsDrawer" hidden aria-label="Settings">
+  <header><h2>Settings</h2><button class="btn" data-close>✕ Close</button></header>
+  <div class="content">
+    <h3>OpenRouter API key</h3>
+    <div class="field">
+      <label for="apiKeyInput">API key</label>
+      <div class="key-row">
+        <input type="password" id="apiKeyInput" class="mono" placeholder="sk-or-v1-…" autocomplete="off" spellcheck="false" style="font-size:12.5px"/>
+        <button class="btn" id="toggleKeyBtn" type="button">Show</button>
+      </div>
+      <p class="note">Stored only in this browser's localStorage. Sent only to <span class="mono">openrouter.ai</span> with your chat requests — nowhere else. Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.</p>
+      <button class="btn primary" id="saveKeyBtn">Save key</button>
+      <button class="btn" id="testKeyBtn">Test connection</button>
+      <span id="keyStatus" style="font-size:13px;margin-left:6px"></span>
+    </div>
+
+    <h3>Participants — speaking order</h3>
+    <p class="note">Models reply top-to-bottom, one at a time, each seeing everything said before it. Drag the ⠿ handle (or use ↑ ↓) to reorder. Uncheck a model to sit it out. Tap the model field to pick from OpenRouter's live catalog — prices are per million tokens.</p>
+    <div id="participantEditor"></div>
+    <div class="p-edit">
+      <div style="font-weight:800;font-size:14px;margin-bottom:9px">Add a model</div>
+      <div class="name-row">
+        <input type="text" id="newName" placeholder="Display name — e.g. DeepSeek"/>
+        <input type="color" id="newColor" value="#7c5cbf"/>
+      </div>
+      <div id="newModelPicker"></div>
+      <button class="btn primary" id="addParticipantBtn" style="margin-top:10px">Add participant</button>
+    </div>
+
+    <h3>Discussion</h3>
+    <div class="field">
+      <label for="maxRoundsInput">“Keep discussing” cap — max back-to-back rounds without you typing</label>
+      <input type="number" id="maxRoundsInput" min="1" max="25" step="1"/>
+    </div>
+    <div class="field">
+      <label for="tempInput">Temperature — <span id="tempVal"></span></label>
+      <input type="range" id="tempInput" min="0" max="1.5" step="0.1"/>
+      <p class="note">Lower = more focused, higher = more argumentative. 0.7 is a good default for debate. If a model doesn't support temperature, it's retried automatically without it.</p>
+    </div>
+    <div class="field">
+      <label for="extraPromptInput">Extra instruction for every model (optional)</label>
+      <input type="text" id="extraPromptInput" placeholder="e.g. Be blunt. No hedging."/>
+    </div>
+    <button class="btn primary" id="saveSettingsBtn">Save discussion settings</button>
+
+    <h3>Appearance</h3>
+    <p class="note">Dark mode is the default. Your choice is remembered in this browser.</p>
+    <button class="btn" id="themeBtn3">Toggle light / dark</button>
+
+    <h3>Danger zone</h3>
+    <button class="btn" id="clearAllBtn" style="color:var(--danger);border-color:var(--danger)">Delete all saved chats &amp; key</button>
+  </div>
+</aside>
+
+<!-- HISTORY -->
+<aside class="drawer" id="historyDrawer" hidden aria-label="Past chats">
+  <header><h2>Saved chats</h2><button class="btn" data-close>✕ Close</button></header>
+  <div class="content">
+    <p class="note">Chats save automatically in this browser as you talk.</p>
+    <div id="chatList"></div>
+  </div>
+</aside>
+
+<!-- PARTICIPANTS SHEET -->
+<div class="sheet" id="partSheet" hidden role="dialog" aria-label="Participants and speaking order">
+  <div class="sheet-grab"></div>
+  <header><h2>Participants</h2><button class="btn" id="sheetCloseBtn">✕ Close</button></header>
+  <p class="sheet-note">Speaking order — models reply top to bottom, each reading everything said before it. Toggle a model out to sit it out of the chat.</p>
+  <div id="sheetList"></div>
+  <button class="btn" id="sheetSettingsBtn">Manage models &amp; order in Settings</button>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ================= Storage ================= */
+var LS = { key:"mmgc.apiKey", parts:"mmgc.participants", chats:"mmgc.chats", current:"mmgc.currentChat", prefs:"mmgc.prefs", theme:"mmgc.theme" };
+function lsGet(k, fallback){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast("Storage full — oldest data may not save."); } }
+
+var PALETTE = ["#c4502b","#0f766e","#2563eb","#3f3f46","#b07d10","#7c5cbf","#0e7a5f","#a21caf","#0369a1","#b42318"];
+/* Fallback defaults below were read from the live OpenRouter catalog
+   (https://openrouter.ai/api/v1/models) on 2026-10-30 — each is the model its
+   provider's own catalog entry describes as the flagship:
+   These are only used if the live catalog can't be loaded. On first run the
+   catalog is fetched and resolveFlagships() picks the newest flagship per
+   provider; any participant still on an untouched default whose ID is missing
+   from the catalog is also re-picked on later loads. */
+var FALLBACK_DEFAULTS = [
+  { id:"p-claude", name:"Claude", avatar:"C", modelId:"anthropic/claude-opus-5.5", color:"#c4502b", enabled:true },
+  { id:"p-gpt",    name:"GPT",    avatar:"O", modelId:"openai/gpt-6.1-sol",        color:"#0f766e", enabled:true },
+  { id:"p-gemini", name:"Gemini", avatar:"G", modelId:"google/gemini-4-argon",     color:"#2563eb", enabled:true },
+  { id:"p-grok",   name:"Grok",   avatar:"X", modelId:"x-ai/grok-4.7",             color:"#8b5cf6", enabled:true }
+];
+/* Model IDs shipped as defaults in the previous build — only these get
+   auto-upgraded to the current flagships, so a model someone picked by
+   hand in the picker is never silently replaced. */
+var PREVIOUS_DEFAULT_IDS = ["anthropic/claude-sonnet-4.5","openai/gpt-5","google/gemini-2.5-pro","x-ai/grok-4","openai/gpt-6-astra"];
+var DEFAULT_AVATARS = { "p-claude":"C", "p-gpt":"O", "p-gemini":"G", "p-grok":"X" };
+
+var storedPartsExisted = false;
+try{ storedPartsExisted = !!localStorage.getItem(LS.parts); }catch(e){}
+var participants = lsGet(LS.parts, null);
+if(!Array.isArray(participants) || !participants.length){ participants = FALLBACK_DEFAULTS.map(function(x){ return Object.assign({}, x); }); lsSet(LS.parts, participants); }
+participants.forEach(function(p){ if(p.id === "p-grok" && p.color === "#3f3f46") p.color = "#8b5cf6"; });
+var prefs = Object.assign({ maxAutoRounds:5, temperature:0.7, extraPrompt:"" }, lsGet(LS.prefs, {}));
+var chats = lsGet(LS.chats, []);
+var currentChatId = lsGet(LS.current, null);
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function newChat(){
+  var c = { id:uid(), title:"New chat", createdAt:Date.now(), updatedAt:Date.now(), messages:[], totalTokens:0, totalPromptTokens:0, totalCompletionTokens:0, totalCost:0, autoRounds:0 };
+  chats.unshift(c); currentChatId = c.id; roundCounter = 0; persistChats(); return c;
+}
+function recomputeRoundCounter(){
+  var c = chats.find(function(x){ return x.id===currentChatId; });
+  var msgs = c ? c.messages : [];
+  roundCounter = msgs.reduce(function(mx, m){ return Math.max(mx, (typeof m.round === "number" ? m.round + 1 : 0)); }, 0);
+}
+function currentChat(){
+  var c = chats.find(function(x){ return x.id===currentChatId; });
+  if(!c){ c = chats[0] || newChat(); currentChatId = c.id; }
+  return c;
+}
+function persistChats(){ lsSet(LS.chats, chats); lsSet(LS.current, currentChatId); }
+function persistParts(){ lsSet(LS.parts, participants); }
+function getKey(){ try{ return localStorage.getItem(LS.key) || ""; }catch(e){ return ""; } }
+
+/* ================= Theme ================= */
+function currentTheme(){ return document.documentElement.dataset.theme === "light" ? "light" : "dark"; }
+function applyTheme(t, save){
+  document.documentElement.dataset.theme = t;
+  if(save) lsSet(LS.theme, t);
+  var label = t === "dark" ? "☀" : "☾";
+  var b1 = document.getElementById("themeBtn"); if(b1) b1.textContent = label;
+  var b2 = document.getElementById("themeBtn2"); if(b2) b2.innerHTML = (t === "dark" ? "☀&nbsp; Switch to light mode" : "☾&nbsp; Switch to dark mode");
+}
+function toggleTheme(){ applyTheme(currentTheme() === "dark" ? "light" : "dark", true); }
+
+/* ================= Live model catalog (OpenRouter, no key needed) ================= */
+var modelCatalog = [];        /* [{id, name, pricing, created, output}] */
+var modelById = {};
+var pricingMap = {};
+var catalogState = "loading"; /* loading | ready | error */
+function trimNum(s){ return s.indexOf(".") >= 0 ? s.replace(/0+$/,"").replace(/\.$/,"") : s; }
+function fmtPerM(v){
+  var n = parseFloat(v || 0) * 1000000;
+  if(!n) return "0";
+  if(n < 1) return trimNum(n.toFixed(3));
+  if(n >= 100) return n.toFixed(0);
+  return trimNum(n.toFixed(2));
+}
+function priceLabel(m){
+  if(!m || !m.pricing) return "";
+  var pr = parseFloat(m.pricing.prompt || 0), co = parseFloat(m.pricing.completion || 0);
+  if(!pr && !co) return "Free";
+  return "$" + fmtPerM(m.pricing.prompt) + " in · $" + fmtPerM(m.pricing.completion) + " out /1M";
+}
+function estimateCost(modelId, usage){
+  if(!usage) return 0;
+  if(typeof usage.cost === "number") return usage.cost;
+  var p = pricingMap[modelId];
+  if(p){
+    var pr = parseFloat(p.prompt||0), co = parseFloat(p.completion||0);
+    if(pr || co) return (usage.prompt_tokens||0)*pr + (usage.completion_tokens||0)*co;
+  }
+  return 0;
+}
+function modelVersionNums(id){
+  var m = String(id).match(/\d+(?:\.\d+)?/g);
+  return m ? m.map(function(x){ return parseFloat(x); }) : [];
+}
+function cmpVersion(a, b){
+  var n = Math.max(a.length, b.length);
+  for(var i=0;i<n;i++){ var d = (a[i]||0) - (b[i]||0); if(d) return d; }
+  return 0;
+}
+/* Newest flagship for a provider: flagship tier first (per-provider tier order),
+   then highest version number, then most recently added to the catalog. When
+   neither candidate matches a tier keyword, ID numbers are not versions (e.g.
+   "-120b" is a parameter count), so the most recently added model wins. */
+function pickFlagship(prefix, tiers){
+  var cands = modelCatalog.filter(function(m){
+    if(m.id.indexOf(prefix) !== 0) return false;
+    if(m.id.indexOf(":") >= 0) return false; /* :free / :batch variants */
+    if(/image|banana|lyria|tts|audio|embedding|rerank|multi-agent|build/i.test(m.id)) return false;
+    if(m.output && m.output.indexOf("text") < 0) return false;
+    return true;
+  });
+  if(!cands.length) return null;
+  var candIds = {}; cands.forEach(function(m){ candIds[m.id] = true; });
+  var nonPro = cands.filter(function(m){ return !(/-pro\b/.test(m.id) && candIds[m.id.replace(/-pro\b/, "")]); });
+  if(nonPro.length) cands = nonPro;
+  function tierIdx(m){ for(var i=0;i<tiers.length;i++){ if(m.id.indexOf(tiers[i]) >= 0) return i; } return tiers.length; }
+  cands.sort(function(a,b){
+    var ta = tierIdx(a), tb = tierIdx(b);
+    var t = ta - tb; if(t) return t;
+    if(ta === tiers.length){
+      /* No tier keyword matched either candidate — don't rank by ID numbers. */
+      return (b.created||0) - (a.created||0);
+    }
+    var v = cmpVersion(modelVersionNums(b.id), modelVersionNums(a.id)); if(v) return v;
+    return (b.created||0) - (a.created||0);
+  });
+  return cands[0].id;
+}
+function resolveFlagships(){
+  return {
+    "p-claude": pickFlagship("anthropic/", ["opus","fable","sonnet","haiku"]),
+    "p-gpt":    pickFlagship("openai/", ["astra","sol","terra","luna"]),
+    "p-gemini": pickFlagship("google/", ["argon","pro","flash"]),
+    "p-grok":   pickFlagship("x-ai/", ["grok-"])
+  };
+}
+function applyFlagshipDefaults(){
+  var resolved = resolveFlagships();
+  var changed = false;
+  participants.forEach(function(p){
+    var target = resolved[p.id];
+    if(!target || target === p.modelId) return;
+    var fallbackIds = FALLBACK_DEFAULTS.map(function(x){ return x.modelId; });
+    var untouchedMissing = fallbackIds.indexOf(p.modelId) >= 0 && !modelById[p.modelId];
+    if(!storedPartsExisted || PREVIOUS_DEFAULT_IDS.indexOf(p.modelId) >= 0 || untouchedMissing){
+      p.modelId = target; changed = true;
+    }
+  });
+  if(changed){ persistParts(); renderStrip(); if(!$("settingsDrawer").hidden) renderEditor(); }
+}
+function fetchModels(){
+  fetch("https://openrouter.ai/api/v1/models").then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if(!j || !j.data){ catalogState = "error"; return; }
+    modelCatalog = j.data.map(function(m){
+      return { id:m.id, name:m.name || m.id, pricing:m.pricing || {}, created:m.created || 0,
+               output:(m.architecture && m.architecture.output_modalities) || ["text"] };
+    });
+    modelCatalog.forEach(function(m){ modelById[m.id] = m; pricingMap[m.id] = m.pricing; });
+    catalogState = "ready";
+    applyFlagshipDefaults();
+    refreshOpenPickers();
+    if(!$("settingsDrawer").hidden) renderEditor();
+  }).catch(function(){ catalogState = "error"; refreshOpenPickers(); });
+}
+
+/* ================= Markdown-lite (escaped first) ================= */
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function inlineMd(s){
+  s = esc(s);
+  s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function renderMd(text){
+  if(!text) return "";
+  var blocks = String(text).split(/```/);
+  var out = "";
+  for(var i=0;i<blocks.length;i++){
+    if(i%2===1){
+      var code = blocks[i].replace(/^[a-zA-Z0-9_-]*\n/, "");
+      out += "<pre><code>" + esc(code.replace(/\n$/,"")) + "</code></pre>";
+    } else {
+      var lines = blocks[i].split("\n"), html = "", list = null;
+      function closeList(){ if(list){ html += "</"+list+">"; list=null; } }
+      lines.forEach(function(line){
+        var t = line.trim();
+        if(/^#{1,4}\s/.test(t)){ closeList(); html += "<h3>" + inlineMd(t.replace(/^#{1,4}\s/,"")) + "</h3>"; return; }
+        if(/^&gt;/.test(t) || /^>\s/.test(t)){ closeList(); html += "<blockquote>" + inlineMd(t.replace(/^>\s?/,"")) + "</blockquote>"; return; }
+        var ul = t.match(/^[-•]\s+(.*)/), ol = t.match(/^\d+[.)]\s+(.*)/);
+        if(ul){ if(list!=="ul"){ closeList(); html+="<ul>"; list="ul"; } html += "<li>"+inlineMd(ul[1])+"</li>"; return; }
+        if(ol){ if(list!=="ol"){ closeList(); html+="<ol>"; list="ol"; } html += "<li>"+inlineMd(ol[1])+"</li>"; return; }
+        closeList();
+        if(t===""){ return; }
+        html += "<p>" + inlineMd(line) + "</p>";
+      });
+      closeList();
+      out += html;
+    }
+  }
+  return out || "<p></p>";
+}
+
+/* ================= UI refs ================= */
+var $ = function(id){ return document.getElementById(id); };
+var chatInner = $("chatInner"), chatScroll = $("chatScroll"), inputEl = $("input");
+var isRunning = false, stopRequested = false, currentAbort = null, roundCounter = 0;
+var currentMentions = [];
+
+function toast(msg){
+  var t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._h); toast._h = setTimeout(function(){ t.hidden = true; }, 3200);
+}
+function initials(name){ return (name.trim().charAt(0) || "?").toUpperCase(); }
+function avLabel(p){ return (p && (p.avatar || DEFAULT_AVATARS[p.id])) || initials((p && p.name) || "?"); }
+function avForMsg(m){ var p = participants.find(function(x){ return x.id === m.senderId; }); return p ? avLabel(p) : initials(m.senderName); }
+function fmtCost(n){ return "$" + (n||0).toFixed(4); }
+function fmtTime(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); }catch(e){ return ""; } }
+
+/* ================= Rendering ================= */
+function renderStrip(){
+  var stack = $("avatarStack");
+  if(stack){
+    stack.innerHTML = participants.map(function(p){
+      return '<span class="stack-av'+(p.enabled?"":" off")+'" style="background:'+esc(p.color)+'" title="'+esc(p.name)+(p.enabled?"":" — sitting out")+'">'+esc(avLabel(p))+'</span>';
+    }).join("");
+  }
+  renderSheetList();
+}
+function renderSheetList(){
+  var list = $("sheetList");
+  if(!list) return;
+  list.innerHTML = "";
+  participants.forEach(function(p, i){
+    var row = document.createElement("div");
+    row.className = "sheet-row" + (p.enabled ? "" : " off");
+    row.innerHTML = '<span class="sheet-order">'+(i+1)+'</span>' +
+      '<span class="stack-av lg" style="background:'+esc(p.color)+'">'+esc(avLabel(p))+'</span>' +
+      '<span class="sheet-name">'+esc(p.name)+'<span class="sheet-model">'+esc(p.modelId)+'</span></span>' +
+      '<label class="switch"><input type="checkbox" '+(p.enabled?"checked":"")+'/> In chat</label>';
+    row.querySelector("input").addEventListener("change", function(ev){
+      p.enabled = ev.target.checked; persistParts(); renderStrip(); renderEditor();
+    });
+    list.appendChild(row);
+  });
+}
+function openSheet(){ closeMenu(); renderSheetList(); $("partSheet").hidden = false; $("overlay").hidden = false; }
+function closeSheet(){
+  var s = $("partSheet"); if(!s || s.hidden) return;
+  s.hidden = true;
+  if($("settingsDrawer").hidden && $("historyDrawer").hidden) $("overlay").hidden = true;
+}
+function renderTotals(){
+  var c = currentChat();
+  var txt = (c.totalTokens||0).toLocaleString() + " tokens · " + fmtCost(c.totalCost);
+  var totalsEl = $("totals"); if(totalsEl) totalsEl.textContent = txt;
+  $("menuInfo").innerHTML = esc(txt) + "<br/>Auto-rounds used: " + (c.autoRounds||0) + " / " + prefs.maxAutoRounds;
+  $("roundInfo").textContent = "Auto-rounds used: " + (c.autoRounds||0) + " / " + prefs.maxAutoRounds;
+}
+function scrollBottom(smooth){
+  requestAnimationFrame(function(){ chatScroll.scrollTo({ top: chatScroll.scrollHeight, behavior: smooth ? "smooth" : "auto" }); });
+}
+function msgEl(m){
+  var wrap = document.createElement("div");
+  wrap.className = "msg" + (m.senderType==="user" ? " user" : "");
+  wrap.id = "msg-" + m.id;
+  wrap.dataset.skey = m.senderType + "|" + (m.senderId || m.senderName || "");
+  var color = m.senderType==="user" ? "#888888" : (m.color || "#888");
+  wrap.style.setProperty("--sc", String(color));
+  /* The raw model ID stays hidden — tap (or long-press) the name to reveal it. */
+  var who = '<div class="who"><span class="name"'+(m.modelId ? ' title="'+esc(m.modelId)+'"' : '')+'>'+esc(m.senderName)+'</span>' +
+    (m.modelId ? '<span class="model-tip" hidden>'+esc(m.modelId)+'</span>' : '') +
+    '<time>'+fmtTime(m.ts)+'</time></div>';
+  var bodyHtml;
+  if(m.streaming && !m.content){ bodyHtml = '<span class="typing"><i></i><i></i><i></i></span>'; }
+  else { bodyHtml = renderMd(m.content || ""); }
+  var meta = "";
+  if(m.usage){
+    /* Token/cost line stays hidden until the message is tapped. */
+    meta = '<div class="meta tap" hidden><span>'+(m.usage.prompt_tokens||0)+' in · '+(m.usage.completion_tokens||0)+' out</span>' +
+      (m.cost ? '<span>'+fmtCost(m.cost)+'</span>' : '<span>cost n/a</span>') + '</div>';
+  } else if(m.error){
+    meta = '<div class="meta"><span style="color:var(--danger)">failed — round continued with the others</span></div>';
+  }
+  wrap.innerHTML =
+    (m.senderType==="user" ? "" : '<div class="avatar" style="background:'+esc(String(color))+'">'+esc(avForMsg(m))+'</div>') +
+    '<div class="bubble">' + who +
+    '<div class="body'+(m.error?" error":"")+(m.usage?" tappable":"")+'">' + bodyHtml + '</div>' + meta + '</div>';
+  if(m.usage){
+    var metaEl = wrap.querySelector(".meta.tap");
+    wrap.querySelector(".body").addEventListener("click", function(e){
+      if(e.target.closest("a")) return;
+      metaEl.hidden = !metaEl.hidden;
+    });
+  }
+  if(m.modelId){
+    var nameEl = wrap.querySelector(".name"), tipEl = wrap.querySelector(".model-tip"), suppressClick = false;
+    function toggleTip(){ tipEl.hidden = !tipEl.hidden; }
+    nameEl.addEventListener("click", function(){ if(suppressClick){ suppressClick = false; return; } toggleTip(); });
+    var pressTimer = null;
+    nameEl.addEventListener("pointerdown", function(){ pressTimer = setTimeout(function(){ suppressClick = true; toggleTip(); }, 550); });
+    ["pointerup","pointerleave","pointercancel"].forEach(function(ev){ nameEl.addEventListener(ev, function(){ if(pressTimer) clearTimeout(pressTimer); }); });
+  }
+  return wrap;
+}
+/* Consecutive messages from the same speaker collapse: no repeat avatar/name. */
+function applyGrouping(el){
+  if(!el || !el.classList || !el.classList.contains("msg")) return;
+  var prev = el.previousElementSibling;
+  var grouped = !!(prev && prev.classList && prev.classList.contains("msg") && prev.dataset.skey === el.dataset.skey);
+  el.classList.toggle("grouped", grouped);
+}
+function roundDividerEl(roundIdx){
+  var d = document.createElement("div");
+  d.className = "round-divider"; d.dataset.round = String(roundIdx);
+  d.textContent = "Round " + (roundIdx + 1);
+  return d;
+}
+function renderChat(){
+  var c = currentChat();
+  chatInner.innerHTML = "";
+  if(!c.messages.length){
+    var e = document.createElement("div");
+    var examplesHtml =
+      '<p class="ex-label">Try one of these</p><div class="examples">' +
+      '<button class="example" data-ex="Which of you is actually best at debugging, and why isn\'t it you? Defend your pick.">Who\'s best at debugging?</button>' +
+      '<button class="example" data-ex="Is a hot dog a sandwich? One paragraph each, then respond to each other.">Is a hot dog a sandwich?</button>' +
+      '<button class="example" data-ex="@Claude Explain quantum entanglement like I\'m a smart 12-year-old.">@Claude, explain quantum entanglement</button></div>';
+    if(!getKey()){
+      /* No key yet: one welcome card carries the setup — no separate banner. */
+      e.className = "empty welcome";
+      e.innerHTML = '<h2>Welcome to the group chat</h2>' +
+        '<p>Every model sits in one room. Each reads the full transcript and replies in speaking order, so they can argue with each other — not just with you. One thing first: bring your own OpenRouter key.</p>' +
+        '<div class="wstep"><span class="n">1</span><span>Get a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></span></div>' +
+        '<div class="wstep"><span class="n">2</span><span>Paste it into Settings. It\'s stored only in this browser and sent only to OpenRouter.</span></div>' +
+        '<button class="btn primary" id="welcomeKeyBtn" style="margin-top:16px;min-width:210px">Add your API key</button>' +
+        examplesHtml;
+    } else {
+      e.className = "empty";
+      e.innerHTML = '<h2>One room, every model in it.</h2>' +
+        '<p>Send a message and each model replies in speaking order — reading the full transcript, including what the other models just said, with every message labeled by speaker. Use <b>@Name</b> to put a single model on the spot, or hit <b>↻</b> to let them argue another round without you.</p>' +
+        examplesHtml;
+    }
+    e.querySelectorAll("[data-ex]").forEach(function(b){ b.addEventListener("click", function(){ inputEl.value = b.getAttribute("data-ex"); autoGrow(); inputEl.focus(); }); });
+    var wk = e.querySelector("#welcomeKeyBtn");
+    if(wk) wk.addEventListener("click", function(){ openDrawer("settingsDrawer"); });
+    chatInner.appendChild(e);
+  } else {
+    var lastRound = -1;
+    c.messages.forEach(function(m){
+      if(typeof m.round === "number" && m.round !== lastRound && m.senderType !== "user"){
+        lastRound = m.round;
+        chatInner.appendChild(roundDividerEl(m.round));
+      }
+      var el = msgEl(m);
+      chatInner.appendChild(el);
+      applyGrouping(el);
+    });
+  }
+  renderTotals();
+  scrollBottom(false);
+}
+function updateMsgEl(m){
+  var old = $("msg-" + m.id);
+  if(!old){ var elNew = msgEl(m); chatInner.appendChild(elNew); applyGrouping(elNew); return; }
+  var fresh = msgEl(m);
+  old.replaceWith(fresh);
+  applyGrouping(fresh);
+  var next = fresh.nextElementSibling;
+  if(next && next.classList && next.classList.contains("msg")) applyGrouping(next);
+}
+
+/* ================= Model picker (searchable, live catalog) ================= */
+var openPickerRefreshers = [];
+function refreshOpenPickers(){ openPickerRefreshers.slice().forEach(function(f){ f(); }); }
+function buildPicker(currentId, onPick){
+  var wrap = document.createElement("div");
+  wrap.className = "model-picker";
+  var selectedId = currentId || "";
+  wrap.innerHTML =
+    '<button type="button" class="picker-btn"><span class="pid"></span><span class="pprice"></span><span class="chev">▾</span></button>' +
+    '<div class="picker-pop" hidden><input type="text" class="picker-search" placeholder="Search models — name or ID…" autocomplete="off" spellcheck="false"/>' +
+    '<div class="picker-list"></div><div class="picker-note" hidden></div></div>';
+  var btn = wrap.querySelector(".picker-btn"), pop = wrap.querySelector(".picker-pop"),
+      search = wrap.querySelector(".picker-search"), list = wrap.querySelector(".picker-list"),
+      note = wrap.querySelector(".picker-note");
+  function paintBtn(){
+    btn.querySelector(".pid").textContent = selectedId || "Choose a model…";
+    var m = modelById[selectedId];
+    btn.querySelector(".pprice").textContent = m ? priceLabel(m) : (selectedId ? "custom ID" : "");
+  }
+  function renderList(){
+    var q = search.value.trim().toLowerCase();
+    list.innerHTML = ""; note.hidden = true;
+    if(catalogState === "loading"){
+      note.hidden = false; note.textContent = "Loading the live model list from OpenRouter…";
+      return;
+    }
+    if(catalogState === "error" && !modelCatalog.length){
+      note.hidden = false;
+      note.textContent = "Couldn't load the live model list — check your connection. You can still type a full model ID below and use it as a custom ID.";
+    }
+    var matches = modelCatalog.filter(function(m){
+      if(!q) return true;
+      return m.id.toLowerCase().indexOf(q) >= 0 || m.name.toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 80);
+    matches.forEach(function(m){
+      var row = document.createElement("button");
+      row.type = "button";
+      row.className = "picker-row" + (m.id === selectedId ? " sel" : "");
+      row.innerHTML = '<span class="pr-main"><span class="pr-id">'+esc(m.id)+'</span><span class="pr-name">'+esc(m.name)+'</span></span>' +
+        '<span class="pr-price">'+esc(priceLabel(m)).replace(" · ","<br/>")+'</span>' + (m.id === selectedId ? '<span>✓</span>' : '');
+      row.addEventListener("click", function(){
+        selectedId = m.id; paintBtn(); pop.hidden = true; onPick(m.id);
+      });
+      list.appendChild(row);
+    });
+    if(q && q.indexOf("/") > 0 && !modelById[search.value.trim()]){
+      var custom = document.createElement("button");
+      custom.type = "button"; custom.className = "picker-row custom";
+      custom.innerHTML = '<span class="pr-main"><span class="pr-id">Use custom ID “'+esc(search.value.trim())+'”</span><span class="pr-name">Not in the live catalog — used exactly as typed</span></span>';
+      custom.addEventListener("click", function(){
+        selectedId = search.value.trim(); paintBtn(); pop.hidden = true; onPick(selectedId);
+      });
+      list.appendChild(custom);
+    }
+    if(!matches.length && catalogState === "ready" && !(q && q.indexOf("/") > 0)){
+      note.hidden = false; note.textContent = "No models match that search.";
+    }
+  }
+  btn.addEventListener("click", function(){
+    var willOpen = pop.hidden;
+    document.querySelectorAll(".picker-pop").forEach(function(x){ x.hidden = true; });
+    pop.hidden = !willOpen;
+    if(willOpen){ renderList(); setTimeout(function(){ search.focus(); }, 30); }
+  });
+  search.addEventListener("input", renderList);
+  search.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); var first = list.querySelector(".picker-row"); if(first) first.click(); } });
+  var refresher = function(){ if(!pop.hidden) renderList(); paintBtn(); };
+  refresher._pickerWrap = wrap;
+  openPickerRefreshers.push(refresher);
+  paintBtn();
+  wrap._setValue = function(v){ selectedId = v || ""; paintBtn(); };
+  wrap._getValue = function(){ return selectedId; };
+  return wrap;
+}
+
+/* ================= Settings / editor ================= */
+function renderEditor(){
+  var ed = $("participantEditor");
+  if(!ed) return;
+  openPickerRefreshers = openPickerRefreshers.filter(function(f){ return !f._pickerWrap || document.contains(f._pickerWrap) || (addPicker && f._pickerWrap === addPicker); });
+  ed.innerHTML = "";
+  participants.forEach(function(p, idx){
+    var box = document.createElement("div");
+    box.className = "p-edit"; box.draggable = true; box.dataset.id = p.id;
+    box.innerHTML =
+      '<div class="p-edit-top"><span class="drag-handle" title="Drag to reorder">⠿</span>' +
+      '<b style="flex:1;font-size:14px">#'+(idx+1)+' · '+esc(p.name)+'</b>' +
+      '<button class="mini-btn" data-move="-1" title="Move up">↑</button>' +
+      '<button class="mini-btn" data-move="1" title="Move down">↓</button>' +
+      '<button class="mini-btn red" data-del title="Remove">✕</button></div>' +
+      '<div class="name-row"><input type="text" data-f="name" value="'+esc(p.name)+'" placeholder="Display name"/>' +
+      '<input type="text" data-f="avatar" value="'+esc(avLabel(p))+'" maxlength="8" title="Avatar: one letter or emoji" aria-label="Avatar letter or emoji" style="flex:0 0 56px;text-align:center"/>' +
+      '<input type="color" data-f="color" value="'+esc(p.color)+'"/></div>' +
+      '<div data-picker-slot></div>' +
+      (catalogState === "ready" && p.modelId && !modelById[p.modelId] ? '<p class="model-missing">⚠ not found in OpenRouter\'s catalog — pick another model above.</p>' : '') +
+      '<label class="switch"><input type="checkbox" data-f="enabled" '+(p.enabled?"checked":"")+'/> In chat</label>';
+    var picker = buildPicker(p.modelId, function(newId){
+      p.modelId = newId; persistParts(); renderStrip(); renderEditor();
+    });
+    box.querySelector("[data-picker-slot]").appendChild(picker);
+    box.querySelectorAll("input[data-f]").forEach(function(inp){
+      inp.addEventListener("change", function(){
+        var f = inp.getAttribute("data-f");
+        if(f==="enabled") p.enabled = inp.checked;
+        else if(f==="color") p.color = inp.value;
+        else if(f==="name") p.name = inp.value.trim() || p.name;
+        else if(f==="avatar"){ var a = Array.from(inp.value.trim())[0] || ""; p.avatar = /^[a-z]$/.test(a) ? a.toUpperCase() : a; }
+        persistParts(); renderStrip(); renderEditor();
+      });
+    });
+    box.querySelector("[data-del]").addEventListener("click", function(){
+      participants = participants.filter(function(x){ return x.id !== p.id; });
+      persistParts(); renderStrip(); renderEditor(); toast(p.name + " removed.");
+    });
+    box.querySelectorAll("[data-move]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var d = parseInt(b.getAttribute("data-move"),10), j = idx + d;
+        if(j < 0 || j >= participants.length) return;
+        var tmp = participants[idx]; participants[idx] = participants[j]; participants[j] = tmp;
+        persistParts(); renderStrip(); renderEditor();
+      });
+    });
+    box.addEventListener("dragstart", function(ev){ box.classList.add("dragging"); ev.dataTransfer.setData("text/plain", p.id); ev.dataTransfer.effectAllowed = "move"; });
+    box.addEventListener("dragend", function(){ box.classList.remove("dragging"); ed.querySelectorAll(".p-edit").forEach(function(x){ x.classList.remove("dragover"); }); });
+    box.addEventListener("dragover", function(ev){ ev.preventDefault(); box.classList.add("dragover"); });
+    box.addEventListener("dragleave", function(){ box.classList.remove("dragover"); });
+    box.addEventListener("drop", function(ev){
+      ev.preventDefault();
+      var dragId = ev.dataTransfer.getData("text/plain");
+      var from = participants.findIndex(function(x){ return x.id===dragId; });
+      var to = participants.findIndex(function(x){ return x.id===p.id; });
+      if(from<0 || to<0 || from===to) return;
+      var item = participants.splice(from,1)[0]; participants.splice(to,0,item);
+      persistParts(); renderStrip(); renderEditor();
+    });
+    ed.appendChild(box);
+  });
+}
+var addPicker = null;
+function renderAddPicker(){
+  var slot = $("newModelPicker");
+  slot.innerHTML = "";
+  addPicker = buildPicker("", function(){});
+  slot.appendChild(addPicker);
+}
+function renderHistory(){
+  var list = $("chatList");
+  var sorted = chats.slice().sort(function(a,b){ return b.updatedAt - a.updatedAt; });
+  if(!sorted.length){ list.innerHTML = '<p class="note">No saved chats yet.</p>'; return; }
+  list.innerHTML = "";
+  sorted.forEach(function(c){
+    var b = document.createElement("div");
+    b.className = "chat-item" + (c.id===currentChatId ? " current" : "");
+    b.innerHTML = '<div class="t"><b>'+esc(c.title || "New chat")+'</b><span>'+new Date(c.updatedAt).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})+' · '+c.messages.length+' messages · '+fmtCost(c.totalCost)+'</span></div>' +
+      '<button class="mini-btn red" title="Delete chat">✕</button>';
+    b.querySelector(".t").addEventListener("click", function(){
+      currentChatId = c.id; recomputeRoundCounter(); persistChats(); renderChat(); closeDrawers();
+    });
+    b.querySelector(".mini-btn").addEventListener("click", function(ev){
+      ev.stopPropagation();
+      chats = chats.filter(function(x){ return x.id !== c.id; });
+      if(currentChatId === c.id){ currentChatId = chats[0] ? chats[0].id : null; if(!chats.length) newChat(); }
+      recomputeRoundCounter(); persistChats(); renderHistory(); renderChat();
+    });
+    list.appendChild(b);
+  });
+}
+
+/* ================= Drawers & menu ================= */
+function openDrawer(id){ closeDrawers(true); closeMenu(); $(id).hidden = false; $("overlay").hidden = false; if(id==="historyDrawer") renderHistory(); if(id==="settingsDrawer") renderEditor(); }
+function closeDrawers(keepOverlay){
+  $("settingsDrawer").hidden = true; $("historyDrawer").hidden = true; $("partSheet").hidden = true;
+  if(!keepOverlay) $("overlay").hidden = true;
+}
+function closeMenu(){ $("topMenu").hidden = true; $("menuBtn").setAttribute("aria-expanded","false"); }
+$("menuBtn").addEventListener("click", function(e){
+  e.stopPropagation();
+  var m = $("topMenu"), willOpen = m.hidden;
+  m.hidden = !willOpen;
+  $("menuBtn").setAttribute("aria-expanded", willOpen ? "true" : "false");
+  if(willOpen) renderTotals();
+});
+document.addEventListener("click", function(e){ if(!e.target.closest(".menu-wrap")) closeMenu(); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape"){ closeMenu(); hideMentions(); closeSheet(); } });
+$("settingsBtn").addEventListener("click", function(){ openDrawer("settingsDrawer"); });
+$("stackBtn").addEventListener("click", openSheet);
+$("sheetCloseBtn").addEventListener("click", closeSheet);
+$("sheetSettingsBtn").addEventListener("click", function(){ closeSheet(); openDrawer("settingsDrawer"); });
+$("historyBtn").addEventListener("click", function(){ closeMenu(); openDrawer("historyDrawer"); });
+$("overlay").addEventListener("click", closeDrawers);
+document.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", closeDrawers); });
+$("themeBtn2").addEventListener("click", function(){ toggleTheme(); });
+$("themeBtn3").addEventListener("click", toggleTheme);
+
+/* ================= Settings actions ================= */
+$("apiKeyInput").value = getKey();
+$("maxRoundsInput").value = prefs.maxAutoRounds;
+$("tempInput").value = prefs.temperature;
+$("tempVal").textContent = Number(prefs.temperature).toFixed(1);
+$("extraPromptInput").value = prefs.extraPrompt || "";
+$("tempInput").addEventListener("input", function(){ $("tempVal").textContent = Number($("tempInput").value).toFixed(1); });
+/* No banner anymore: the empty state itself swaps between the welcome card
+   (no key) and the plain intro (key saved), so just re-render an empty chat. */
+function refreshKeyBanner(){ var c = currentChat(); if(!c.messages.length) renderChat(); }
+$("toggleKeyBtn").addEventListener("click", function(){
+  var i = $("apiKeyInput"); var show = i.type === "password";
+  i.type = show ? "text" : "password"; $("toggleKeyBtn").textContent = show ? "Hide" : "Show";
+});
+$("saveKeyBtn").addEventListener("click", function(){
+  var v = $("apiKeyInput").value.trim();
+  try{ if(v) localStorage.setItem(LS.key, v); else localStorage.removeItem(LS.key); }catch(e){}
+  refreshKeyBanner(); toast(v ? "API key saved in this browser." : "API key cleared.");
+});
+$("testKeyBtn").addEventListener("click", function(){
+  var v = $("apiKeyInput").value.trim() || getKey();
+  var st = $("keyStatus");
+  if(!v){ st.textContent = "Enter a key first."; return; }
+  st.textContent = "Testing…";
+  fetch("https://openrouter.ai/api/v1/key", { headers:{ "Authorization":"Bearer " + v } })
+    .then(function(r){
+      if(r.ok) return r.json();
+      return Promise.reject(new Error(r.status === 401 ? "Key was rejected (HTTP 401)" : "HTTP " + r.status));
+    })
+    .then(function(j){
+      var d = j && j.data ? j.data : {};
+      var parts = ["✓ Connected"];
+      if(typeof d.limit_remaining === "number") parts.push("$" + d.limit_remaining.toFixed(2) + " left on this key");
+      if(typeof d.usage === "number") parts.push("$" + d.usage.toFixed(2) + " used");
+      st.textContent = parts.join(" · ");
+      try{ localStorage.setItem(LS.key, v); }catch(e){}
+      refreshKeyBanner();
+    })
+    .catch(function(e){ st.textContent = "✕ " + (isNetworkError(e) ? "Couldn't reach OpenRouter — the network or this host may be blocking it." : e.message + " — check the key."); });
+});
+$("saveSettingsBtn").addEventListener("click", function(){
+  prefs.maxAutoRounds = Math.min(25, Math.max(1, parseInt($("maxRoundsInput").value,10) || 5));
+  prefs.temperature = parseFloat($("tempInput").value) || 0.7;
+  prefs.extraPrompt = $("extraPromptInput").value.trim();
+  lsSet(LS.prefs, prefs); renderTotals(); toast("Discussion settings saved.");
+});
+$("addParticipantBtn").addEventListener("click", function(){
+  var name = $("newName").value.trim();
+  var model = addPicker ? addPicker._getValue() : "";
+  if(!name || !model){ toast("Give it a display name and pick a model from the list."); return; }
+  participants.push({ id:uid(), name:name, modelId:model, color:$("newColor").value || PALETTE[participants.length % PALETTE.length], enabled:true });
+  $("newName").value = ""; renderAddPicker();
+  persistParts(); renderStrip(); renderEditor(); toast(name + " added at the end of the speaking order.");
+});
+$("clearAllBtn").addEventListener("click", function(){
+  if($("clearAllBtn").dataset.armed){
+    [LS.key, LS.chats, LS.current].forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+    chats = []; newChat(); $("apiKeyInput").value = ""; refreshKeyBanner(); renderChat(); renderHistory(); closeDrawers(); toast("All chats and key deleted.");
+  } else {
+    $("clearAllBtn").dataset.armed = "1"; $("clearAllBtn").textContent = "Tap again to confirm delete";
+    setTimeout(function(){ delete $("clearAllBtn").dataset.armed; $("clearAllBtn").textContent = "Delete all saved chats & key"; }, 3500);
+  }
+});
+$("newChatBtn").addEventListener("click", function(){ closeMenu(); if(isRunning) stopRound(); newChat(); renderChat(); inputEl.focus(); });
+$("exportBtn").addEventListener("click", function(){ closeMenu(); exportMarkdown(); });
+
+function exportMarkdown(){
+  var c = currentChat();
+  if(!c.messages.length){ toast("Nothing to export yet."); return; }
+  var md = "# " + (c.title || "Group chat") + "\n\n_Exported " + new Date().toLocaleString() + " · " + c.totalTokens.toLocaleString() + " tokens · " + fmtCost(c.totalCost) + "_\n\n---\n\n";
+  c.messages.forEach(function(m){
+    md += "## " + m.senderName + (m.modelId ? " (" + m.modelId + ")" : "") + "\n\n" + (m.content || "") + "\n\n";
+    if(m.usage) md += "_— " + (m.usage.prompt_tokens||0) + " in / " + (m.usage.completion_tokens||0) + " out tokens · " + fmtCost(m.cost) + "_\n\n";
+    md += "---\n\n";
+  });
+  var blob = new Blob([md], { type:"text/markdown" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "group-chat-" + new Date(c.updatedAt).toISOString().slice(0,10) + ".md";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  toast("Markdown exported.");
+}
+
+/* ================= Chat engine ================= */
+function systemPromptFor(p){
+  /* Only models actually in the room: enabled, plus anyone @mentioned this round. */
+  var inRoom = participants.filter(function(x){
+    return x.enabled || currentMentions.some(function(mp){ return mp.id === x.id; });
+  });
+  var others = inRoom.filter(function(x){ return x.id !== p.id; }).map(function(x){ return x.name; });
+  var s = "You are " + p.name + " (the AI model " + p.modelId + ") in a group chat with Austin (the human) and these other AIs: " + (others.join(", ") || "none") + ". " +
+    "The transcript you receive is a shared conversation where every message is labeled with its speaker. Messages from other AIs are labeled with their names — they are NOT your words. Only messages marked as your own are yours. " +
+    "Read what the others said. Agree, disagree, correct, or build on their points — refer to them by name when you do. Don't repeat what's already been said. Add something new. " +
+    "Keep replies concise (a short paragraph or two) unless Austin asks for depth. Never speak for another participant, never role-play as them, and don't prefix your reply with your own name — it's added automatically.";
+  if(prefs.extraPrompt) s += " Additional instruction from Austin: " + prefs.extraPrompt;
+  return s;
+}
+function buildMessages(p){
+  var c = currentChat();
+  var msgs = [{ role:"system", content: systemPromptFor(p) }];
+  c.messages.forEach(function(m){
+    if(m.streaming || m.error || !m.content) return;
+    if(m.senderType === "user"){ msgs.push({ role:"user", content:"Austin: " + m.content }); }
+    else if(m.senderId === p.id){ msgs.push({ role:"assistant", content: m.content }); }
+    else { msgs.push({ role:"user", content: m.senderName + ": " + m.content }); }
+  });
+  /* Self-follow fix: a trailing assistant message reads as "continue your last
+     reply" to some models and is a hard error on others. Give it a user turn. */
+  if(msgs.length > 1 && msgs[msgs.length-1].role === "assistant"){
+    msgs.push({ role:"user", content:"(It's your turn again in the group chat. Respond to the conversation so far.)" });
+  }
+  return msgs;
+}
+function parseMentions(text){
+  var found = [];
+  participants.forEach(function(p){
+    var re = new RegExp("@" + p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+    if(re.test(text)) found.push(p);
+  });
+  return found;
+}
+var SEND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V5"/><path d="M5.5 11.5 12 5l6.5 6.5"/></svg>';
+var STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/></svg>';
+function setRunningUI(){
+  /* While a round runs, the send arrow becomes the Stop button. */
+  var sb = $("sendBtn");
+  sb.innerHTML = isRunning ? STOP_ICON : SEND_ICON;
+  sb.classList.toggle("stop", isRunning);
+  sb.title = isRunning ? "Stop" : "Send";
+  sb.setAttribute("aria-label", isRunning ? "Stop" : "Send message");
+  $("discussBtn").disabled = isRunning;
+  inputEl.disabled = isRunning;
+}
+function setStatus(t){ $("statusLine").textContent = t || ""; }
+
+function isNetworkError(err){
+  var t = String((err && err.message) || "");
+  return (err && err.name === "TypeError") || /load failed|failed to fetch|networkerror/i.test(t);
+}
+function isUnsupportedParamError(err){
+  var t = String((err && err.message) || "").toLowerCase();
+  return t.indexOf("temperature") >= 0 ||
+    t.indexOf("unsupported parameter") >= 0 ||
+    t.indexOf("unsupported param") >= 0 ||
+    t.indexOf("not supported") >= 0 ||
+    t.indexOf("unknown parameter") >= 0 ||
+    t.indexOf("unrecognized") >= 0 ||
+    (t.indexOf("invalid") >= 0 && t.indexOf("param") >= 0);
+}
+
+async function callModel(p, roundIdx){
+  var c = currentChat();
+  var m = { id:uid(), senderType:"model", senderId:p.id, senderName:p.name, color:p.color, modelId:p.modelId, content:"", ts:Date.now(), round:roundIdx, streaming:true, usage:null, cost:0, error:false };
+  c.messages.push(m); c.updatedAt = Date.now(); persistChats();
+  if(chatInner.querySelector(".empty")) renderChat(); else { var elNew2 = msgEl(m); chatInner.appendChild(elNew2); applyGrouping(elNew2); }
+  scrollBottom(true);
+  setStatus(p.name + " is typing…");
+
+  async function attempt(includeTemp){
+    m.content = ""; m.usage = null; m.cost = 0;
+    updateMsgEl(m);
+    var controller = new AbortController(); currentAbort = controller;
+    var timedOut = false;
+    var timer = setTimeout(function(){ timedOut = true; controller.abort(); }, 120000);
+    try{
+      var body = { model: p.modelId, messages: buildMessages(p), stream: true, usage: { include:true } };
+      if(includeTemp) body.temperature = prefs.temperature;
+      var res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method:"POST",
+        signal: controller.signal,
+        headers:{
+          "Authorization":"Bearer " + getKey(),
+          "Content-Type":"application/json",
+          "X-Title":"Multi-Model Group Chat"
+        },
+        body: JSON.stringify(body)
+      });
+      if(!res.ok){
+        var errText = "";
+        try{ var ej = await res.json(); errText = (ej.error && (ej.error.message || ej.error.code)) || ("HTTP " + res.status); }
+        catch(e){ errText = "HTTP " + res.status; }
+        throw new Error(errText);
+      }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = "", lastPaint = 0;
+      while(true){
+        if(stopRequested) { try{ reader.cancel(); }catch(e){} break; }
+        var chunk = await reader.read();
+        if(chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream:true });
+        var lines = buffer.split("\n"); buffer = lines.pop();
+        for(var li=0; li<lines.length; li++){
+          var line = lines[li].trim();
+          if(!line || line.indexOf("data:") !== 0) continue;
+          var data = line.slice(5).trim();
+          if(data === "[DONE]") continue;
+          try{
+            var json = JSON.parse(data);
+            if(json.error) throw new Error(json.error.message || "Stream error");
+            var delta = json.choices && json.choices[0] && json.choices[0].delta ? (json.choices[0].delta.content || "") : "";
+            if(delta){
+              m.content += delta;
+              var now = Date.now();
+              if(now - lastPaint > 90){ updateMsgEl(m); scrollBottom(false); lastPaint = now; }
+            }
+            if(json.usage){ m.usage = json.usage; }
+          }catch(pe){ if(!(pe instanceof SyntaxError)) throw pe; }
+        }
+      }
+      if(stopRequested && !m.content){ m.content = "_(stopped)_"; }
+      if(!m.content && !stopRequested) throw new Error("Empty response from model.");
+    }catch(err){
+      if(timedOut && err && err.name === "AbortError"){ throw new Error("request timed out after 120s"); }
+      throw err;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
+  try{
+    try{
+      await attempt(true);
+    }catch(firstErr){
+      /* Retry once without temperature when the model rejects that parameter. */
+      if(!stopRequested && !(firstErr && firstErr.name === "AbortError") && !m.content && isUnsupportedParamError(firstErr)){
+        setStatus(p.name + " doesn't accept temperature — retrying without it…");
+        await attempt(false);
+      } else { throw firstErr; }
+    }
+    m.cost = estimateCost(p.modelId, m.usage);
+    if(m.usage){
+      c.totalPromptTokens += m.usage.prompt_tokens || 0;
+      c.totalCompletionTokens += m.usage.completion_tokens || 0;
+      c.totalTokens += m.usage.total_tokens || ((m.usage.prompt_tokens||0) + (m.usage.completion_tokens||0));
+      c.totalCost += m.cost || 0;
+    }
+  }catch(err){
+    if(stopRequested || (err && err.name === "AbortError")){
+      if(!m.content) m.content = "_(stopped)_";
+    } else {
+      m.error = true;
+      m.content = "⚠ " + p.name + " couldn't reply: " + (isNetworkError(err) ? "couldn't reach OpenRouter (network or host blocking)" : (err.message || "network error")) + ". Check the model ID (" + p.modelId + ") and your OpenRouter balance, then keep going — the rest of the group is unaffected.";
+    }
+  }finally{
+    m.streaming = false;
+    c.updatedAt = Date.now(); persistChats();
+    updateMsgEl(m); renderTotals(); scrollBottom(false);
+  }
+}
+
+async function runRound(targets, isAuto, mentioned){
+  if(isRunning) return;
+  if(!getKey()){ openDrawer("settingsDrawer"); toast("Add your OpenRouter API key first."); return; }
+  if(!targets.length){ toast("No models are in the chat — enable one in Settings."); return; }
+  var c = currentChat();
+  if(isAuto){
+    if((c.autoRounds||0) >= prefs.maxAutoRounds){ toast("Auto-round cap reached (" + prefs.maxAutoRounds + "). Send a message to reset it."); return; }
+    c.autoRounds = (c.autoRounds||0) + 1;
+  }
+  currentMentions = mentioned || [];
+  isRunning = true; stopRequested = false; setRunningUI();
+  var roundIdx = roundCounter++;
+  /* Live round divider — appended now, not on the next full re-render. */
+  var divider = null;
+  if(!chatInner.querySelector(".empty")){
+    divider = roundDividerEl(roundIdx);
+    chatInner.appendChild(divider);
+    scrollBottom(true);
+  }
+  try{
+    for(var i=0;i<targets.length;i++){
+      if(stopRequested) break;
+      await callModel(targets[i], roundIdx);
+      if(stopRequested) break;
+    }
+  }finally{
+    /* If the round was stopped before anyone replied, don't leave a stray divider. */
+    if(divider && !c.messages.some(function(x){ return x.round === roundIdx; })) divider.remove();
+    currentMentions = [];
+    isRunning = false; currentAbort = null; setRunningUI(); setStatus("");
+    persistChats(); renderTotals();
+    if(stopRequested) toast("Round stopped.");
+  }
+}
+function stopRound(){
+  stopRequested = true;
+  if(currentAbort){ try{ currentAbort.abort(); }catch(e){} }
+}
+$("discussBtn").addEventListener("click", function(){
+  var c = currentChat();
+  if(!c.messages.length){ toast("Send a first message to get them started."); return; }
+  runRound(participants.filter(function(p){ return p.enabled; }), true, []);
+});
+
+function sendUserMessage(){
+  var text = inputEl.value.trim();
+  if(!text || isRunning) return;
+  if(!getKey()){ openDrawer("settingsDrawer"); toast("Add your OpenRouter API key first."); return; }
+  var c = currentChat();
+  c.messages.push({ id:uid(), senderType:"user", senderId:"austin", senderName:"Austin", content:text, ts:Date.now(), usage:null, cost:0 });
+  c.autoRounds = 0;
+  if(c.messages.length === 1 || c.title === "New chat"){ c.title = text.slice(0, 60) + (text.length > 60 ? "…" : ""); }
+  c.updatedAt = Date.now(); persistChats();
+  inputEl.value = ""; autoGrow(); hideMentions();
+  renderChat();
+  var mentioned = parseMentions(text);
+  var targets = mentioned.length ? mentioned : participants.filter(function(p){ return p.enabled; });
+  if(mentioned.length) toast("Only " + mentioned.map(function(p){ return p.name; }).join(", ") + " will reply (mentioned).");
+  runRound(targets, false, mentioned);
+}
+$("sendBtn").addEventListener("click", function(){ if(isRunning) stopRound(); else sendUserMessage(); });
+
+/* ================= Composer helpers ================= */
+function autoGrow(){ inputEl.style.height = "auto"; inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + "px"; }
+inputEl.addEventListener("input", function(){ autoGrow(); updateMentionMenu(); });
+inputEl.addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendUserMessage(); }
+});
+function currentMention(){
+  var v = inputEl.value.slice(0, inputEl.selectionStart || inputEl.value.length);
+  var mm = v.match(/@([A-Za-z0-9_-]*)$/);
+  return mm ? mm[1] : null;
+}
+function updateMentionMenu(){
+  var q = currentMention();
+  var menu = $("mentionMenu");
+  if(q === null){ hideMentions(); return; }
+  var matches = participants.filter(function(p){ return p.name.toLowerCase().indexOf(q.toLowerCase()) === 0; });
+  if(!matches.length){ hideMentions(); return; }
+  menu.innerHTML = "";
+  matches.forEach(function(p){
+    var b = document.createElement("button");
+    b.innerHTML = '<span class="dot" style="background:'+esc(p.color)+'">'+esc(avLabel(p))+'</span>' + esc(p.name) + ' <span class="mid">'+esc(p.modelId)+'</span>';
+    b.addEventListener("mousedown", function(ev){
+      ev.preventDefault();
+      var pos = inputEl.selectionStart || inputEl.value.length;
+      var before = inputEl.value.slice(0, pos).replace(/@[A-Za-z0-9_-]*$/, "@" + p.name + " ");
+      inputEl.value = before + inputEl.value.slice(pos);
+      hideMentions(); autoGrow(); inputEl.focus();
+    });
+    menu.appendChild(b);
+  });
+  menu.hidden = false;
+}
+function hideMentions(){ $("mentionMenu").hidden = true; }
+document.addEventListener("click", function(e){ if(!e.target.closest(".composer-inner")) hideMentions(); });
+
+/* ================= Init ================= */
+applyTheme(currentTheme(), false);
+currentChat();
+recomputeRoundCounter();
+renderStrip(); renderChat(); renderAddPicker(); refreshKeyBanner(); setRunningUI(); autoGrow();
+fetchModels();
+</script>
+</body>
+</html>
