@@ -325,6 +325,11 @@ input[type=range]{width:100%;min-height:32px}
       <p class="note">Lower = more focused, higher = more argumentative. 0.7 is a good default for debate. If a model doesn't support temperature, it's retried automatically without it.</p>
     </div>
     <div class="field">
+      <label for="maxTokensInput">Max reply length (tokens)</label>
+      <input type="number" id="maxTokensInput" min="100" max="16000" step="100"/>
+      <p class="note">Caps how long each reply can be (~0.75 words per token). Without a cap, OpenRouter reserves credit for the model's maximum (often 65,000 tokens) and can refuse the request even when you have enough for a normal reply. 1000 is plenty for group chat.</p>
+    </div>
+    <div class="field">
       <label for="extraPromptInput">Extra instruction for every model (optional)</label>
       <input type="text" id="extraPromptInput" placeholder="e.g. Be blunt. No hedging."/>
     </div>
@@ -391,7 +396,7 @@ try{ storedPartsExisted = !!localStorage.getItem(LS.parts); }catch(e){}
 var participants = lsGet(LS.parts, null);
 if(!Array.isArray(participants) || !participants.length){ participants = FALLBACK_DEFAULTS.map(function(x){ return Object.assign({}, x); }); lsSet(LS.parts, participants); }
 participants.forEach(function(p){ if(p.id === "p-grok" && p.color === "#3f3f46") p.color = "#8b5cf6"; });
-var prefs = Object.assign({ maxAutoRounds:5, temperature:0.7, extraPrompt:"" }, lsGet(LS.prefs, {}));
+var prefs = Object.assign({ maxAutoRounds:5, temperature:0.7, extraPrompt:"", maxTokens:1000 }, lsGet(LS.prefs, {}));
 var chats = lsGet(LS.chats, []);
 var currentChatId = lsGet(LS.current, null);
 
@@ -580,7 +585,7 @@ function toast(msg){
 }
 function initials(name){ return (name.trim().charAt(0) || "?").toUpperCase(); }
 function avLabel(p){ return (p && (p.avatar || DEFAULT_AVATARS[p.id])) || initials((p && p.name) || "?"); }
-function avForMsg(m){ var p = participants.find(function(x){ return x.id === m.senderId; }); return p ? avLabel(p) : initials(m.senderName); }
+function avForMsg(m){ if(m.avatar) return m.avatar; var p = participants.find(function(x){ return x.id === m.senderId; }); return p ? avLabel(p) : initials(m.senderName); }
 function fmtCost(n){ return "$" + (n||0).toFixed(4); }
 function fmtTime(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); }catch(e){ return ""; } }
 
@@ -936,6 +941,7 @@ $("themeBtn3").addEventListener("click", toggleTheme);
 $("apiKeyInput").value = getKey();
 $("maxRoundsInput").value = prefs.maxAutoRounds;
 $("tempInput").value = prefs.temperature;
+$("maxTokensInput").value = prefs.maxTokens;
 $("tempVal").textContent = Number(prefs.temperature).toFixed(1);
 $("extraPromptInput").value = prefs.extraPrompt || "";
 $("tempInput").addEventListener("input", function(){ $("tempVal").textContent = Number($("tempInput").value).toFixed(1); });
@@ -975,6 +981,8 @@ $("testKeyBtn").addEventListener("click", function(){
 $("saveSettingsBtn").addEventListener("click", function(){
   prefs.maxAutoRounds = Math.min(25, Math.max(1, parseInt($("maxRoundsInput").value,10) || 5));
   prefs.temperature = parseFloat($("tempInput").value) || 0.7;
+  prefs.maxTokens = Math.min(16000, Math.max(100, parseInt($("maxTokensInput").value,10) || 1000));
+  $("maxTokensInput").value = prefs.maxTokens;
   prefs.extraPrompt = $("extraPromptInput").value.trim();
   lsSet(LS.prefs, prefs); renderTotals(); toast("Discussion settings saved.");
 });
@@ -1085,7 +1093,7 @@ function isUnsupportedParamError(err){
 
 async function callModel(p, roundIdx){
   var c = currentChat();
-  var m = { id:uid(), senderType:"model", senderId:p.id, senderName:p.name, color:p.color, modelId:p.modelId, content:"", ts:Date.now(), round:roundIdx, streaming:true, usage:null, cost:0, error:false };
+  var m = { id:uid(), senderType:"model", senderId:p.id, senderName:p.name, avatar:avLabel(p), color:p.color, modelId:p.modelId, content:"", ts:Date.now(), round:roundIdx, streaming:true, usage:null, cost:0, error:false };
   c.messages.push(m); c.updatedAt = Date.now(); persistChats();
   if(chatInner.querySelector(".empty")) renderChat(); else { var elNew2 = msgEl(m); chatInner.appendChild(elNew2); applyGrouping(elNew2); }
   scrollBottom(true);
@@ -1098,7 +1106,7 @@ async function callModel(p, roundIdx){
     var timedOut = false;
     var timer = setTimeout(function(){ timedOut = true; controller.abort(); }, 120000);
     try{
-      var body = { model: p.modelId, messages: buildMessages(p), stream: true, usage: { include:true } };
+      var body = { model: p.modelId, messages: buildMessages(p), stream: true, usage: { include:true }, max_tokens: prefs.maxTokens || 1000 };
       if(includeTemp) body.temperature = prefs.temperature;
       var res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method:"POST",
