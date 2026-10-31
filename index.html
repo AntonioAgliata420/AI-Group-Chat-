@@ -908,8 +908,9 @@ function renderHistory(){
 /* ================= Drawers & menu ================= */
 function openDrawer(id){ closeDrawers(true); closeMenu(); $(id).hidden = false; $("overlay").hidden = false; if(id==="historyDrawer") renderHistory(); if(id==="settingsDrawer") renderEditor(); }
 function closeDrawers(keepOverlay){
+  /* keepOverlay must be exactly true: click handlers pass an Event object, which used to leave the dimmed overlay stuck on screen. */
   $("settingsDrawer").hidden = true; $("historyDrawer").hidden = true; $("partSheet").hidden = true;
-  if(!keepOverlay) $("overlay").hidden = true;
+  if(keepOverlay !== true) $("overlay").hidden = true;
 }
 function closeMenu(){ $("topMenu").hidden = true; $("menuBtn").setAttribute("aria-expanded","false"); }
 $("menuBtn").addEventListener("click", function(e){
@@ -926,8 +927,8 @@ $("stackBtn").addEventListener("click", openSheet);
 $("sheetCloseBtn").addEventListener("click", closeSheet);
 $("sheetSettingsBtn").addEventListener("click", function(){ closeSheet(); openDrawer("settingsDrawer"); });
 $("historyBtn").addEventListener("click", function(){ closeMenu(); openDrawer("historyDrawer"); });
-$("overlay").addEventListener("click", closeDrawers);
-document.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", closeDrawers); });
+$("overlay").addEventListener("click", function(){ closeDrawers(); });
+document.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", function(){ closeDrawers(); }); });
 $("themeBtn2").addEventListener("click", function(){ toggleTheme(); });
 $("themeBtn3").addEventListener("click", toggleTheme);
 
