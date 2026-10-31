@@ -150,7 +150,10 @@ a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.msg,.round-divider,.sheet{animation:none}.typing i{animation:none;opacity:.6}}
 
 /* ---------- Composer ---------- */
-.composer{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.composer{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));transition:margin-bottom .25s ease,transform .25s ease;will-change:transform}
+/* Tucked away while scrolling down through the chat; margin pulls it out of the layout so the chat gets the full screen. */
+.composer.tucked{margin-bottom:calc(-1 * var(--composer-h, 90px));transform:translateY(8px)}
+@media (prefers-reduced-motion:reduce){.composer{transition:none}}
 .composer-inner{max-width:780px;margin:0 auto;position:relative}
 #mentionMenu{position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;z-index:40}
 #mentionMenu[hidden]{display:none}
@@ -629,7 +632,9 @@ function renderTotals(){
   $("menuInfo").innerHTML = esc(txt) + "<br/>Auto-rounds used: " + (c.autoRounds||0) + " / " + prefs.maxAutoRounds;
   $("roundInfo").textContent = "Auto-rounds used: " + (c.autoRounds||0) + " / " + prefs.maxAutoRounds;
 }
+var programmaticScrollUntil = 0;
 function scrollBottom(smooth){
+  programmaticScrollUntil = Date.now() + (smooth ? 900 : 250);
   requestAnimationFrame(function(){ chatScroll.scrollTo({ top: chatScroll.scrollHeight, behavior: smooth ? "smooth" : "auto" }); });
 }
 function msgEl(m){
@@ -1288,6 +1293,40 @@ function updateMentionMenu(){
 }
 function hideMentions(){ $("mentionMenu").hidden = true; }
 document.addEventListener("click", function(e){ if(!e.target.closest(".composer-inner")) hideMentions(); });
+
+/* ================= Hide-on-scroll composer =================
+   Scrolling down (thumb moving up) tucks the text box away; scrolling up
+   (thumb moving down) brings it back. It always shows at the bottom of the
+   chat, while typing, and auto-scrolls from incoming replies are ignored. */
+(function(){
+  var composer = document.querySelector(".composer");
+  if(!composer) return;
+  function measure(){ document.documentElement.style.setProperty("--composer-h", composer.offsetHeight + "px"); }
+  measure();
+  if(window.ResizeObserver) new ResizeObserver(function(){ if(!composer.classList.contains("tucked")) measure(); }).observe(composer);
+  var lastY = chatScroll.scrollTop, acc = 0;
+  function setTucked(t){
+    if(t === composer.classList.contains("tucked")) return;
+    if(t){ measure(); hideMentions(); }
+    composer.classList.toggle("tucked", t);
+  }
+  window.showComposer = function(){ setTucked(false); };
+  chatScroll.addEventListener("scroll", function(){
+    var y = chatScroll.scrollTop, dy = y - lastY; lastY = y;
+    if(Date.now() < programmaticScrollUntil || document.activeElement === inputEl){ acc = 0; return; }
+    var fromBottom = chatScroll.scrollHeight - y - chatScroll.clientHeight;
+    if(fromBottom < 40){
+      acc = 0;
+      if(composer.classList.contains("tucked")){ setTucked(false); scrollBottom(false); }
+      return;
+    }
+    if((dy > 0 && acc < 0) || (dy < 0 && acc > 0)) acc = 0;
+    acc += dy;
+    if(acc > 24) setTucked(true);
+    else if(acc < -24) setTucked(false);
+  }, { passive:true });
+  inputEl.addEventListener("focus", function(){ setTucked(false); });
+})();
 
 /* ================= Init ================= */
 applyTheme(currentTheme(), false);
